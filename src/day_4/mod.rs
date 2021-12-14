@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashSet, fmt::Display};
 
 fn get_input() -> (Vec<usize>, Vec<Board>) {
     let mut input = include_str!("input").lines();
@@ -37,7 +37,7 @@ fn get_input() -> (Vec<usize>, Vec<Board>) {
     (wining_nums_str, board_vec)
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 struct Board {
     board: Vec<Vec<usize>>,
 }
@@ -163,6 +163,7 @@ pub fn run_part_1() -> Option<usize> {
     let mut checking_nums: Vec<usize> = Vec::new();
 
     for num in winning_nums {
+        checking_nums.push(num);
         let results: Vec<usize> = boards
             .iter()
             .filter_map(|f| {
@@ -179,8 +180,6 @@ pub fn run_part_1() -> Option<usize> {
         if results.len() > 0 {
             return Some(*results.get(0).unwrap());
         }
-
-        checking_nums.push(num);
     }
 
     return None;
@@ -191,30 +190,25 @@ pub fn run_part_2() -> Option<usize> {
 
     let mut checking_nums: Vec<usize> = Vec::new();
 
+    let mut winners: HashSet<Board> = HashSet::new();
+
     for num in winning_nums {
-        let results: Vec<Option<usize>> = boards
+        checking_nums.push(num);
+
+
+        let temp_winners = winners.clone();
+
+        let new_winners: Vec<Board> = boards
             .iter()
-            .map(|f| {
-                if f.is_winning_board(&checking_nums) {
-                    Some(f.get_score(&checking_nums))
-                } else {
-                    None
-                }
-            })
-            .collect();
+            .filter(|f| f.is_winning_board(&checking_nums) && !temp_winners.contains(f)).map(|b| b.clone() ).collect();
 
-        //println!("{:?}", results);
-
-        if results.iter().all(|f| {
-            match f {
-                Some(_) => true,
-                None => false
-            }
-        }) {
-            return *results.get(0).unwrap();
+        for board in &new_winners {
+            winners.insert(board.clone());
         }
 
-        checking_nums.push(num);
+        if winners.len() == boards.len(){
+            return Some(new_winners.first().unwrap().get_score(&checking_nums));
+        }
     }
 
     return None;
