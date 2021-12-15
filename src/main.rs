@@ -1,6 +1,6 @@
-mod day_4;
-use crate::day_4::run_part_1;
-use crate::day_4::run_part_2;
+mod day_5;
+use crate::day_5::run_part_1;
+use crate::day_5::run_part_2;
 
 fn main() {
     println!("Answer for part 1: {:?}", run_part_1());
