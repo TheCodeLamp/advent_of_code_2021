@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, fs::File, io::Write};
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 struct Point {
@@ -16,7 +16,7 @@ impl From<(usize, usize)> for Point {
 }
 
 impl Point {
-    fn create_line(&self, point: &Point) -> Vec<Point> {
+    fn create_line_expanded(&self, point: &Point) -> Vec<Point> {
         if self.x == point.x {
             let (from, to) = {
                 if self.y < point.y {
@@ -26,7 +26,7 @@ impl Point {
                 }
             };
 
-            (from..to + 1).map(|f| Point { x: self.x, y: f }).collect()
+            return (from..=to).map(|f| Point { x: self.x, y: f }).collect();
         } else if self.y == point.y {
             let (from, to) = {
                 if self.x < point.x {
@@ -36,7 +36,46 @@ impl Point {
                 }
             };
 
-            (from..to + 1).map(|f| Point { x: f, y: self.y }).collect()
+            return (from..=to).map(|f| Point { x: f, y: self.y }).collect();
+        } else if (self.x as i32 - point.x as i32).abs() == (self.y as i32 - point.y as i32).abs() {
+            let direction: (i32, i32) = (
+                (point.x as i32 - self.x as i32).clamp(-1, 1),
+                (point.y as i32 - self.y as i32).clamp(-1, 1),
+            );
+            let distance = (self.x as i32 - point.x as i32).abs();
+
+            return (0..=distance)
+                .map(|x| Point {
+                    x: (self.x as i32 + direction.0*x) as usize,
+                    y: (self.y as i32 + direction.1*x) as usize,
+                })
+                .collect();
+        }
+
+        return Vec::new();
+    }
+    fn create_line(&self, point: &Point) -> Vec<Point> {
+        //Line for part 1
+        if self.x == point.x {
+            let (from, to) = {
+                if self.y < point.y {
+                    (self.y, point.y)
+                } else {
+                    (point.y, self.y)
+                }
+            };
+
+            (from..=to).map(|f| Point { x: self.x, y: f }).collect()
+        } else if self.y == point.y {
+            let (from, to) = {
+                if self.x < point.x {
+                    (self.x, point.x)
+                } else {
+                    (point.x, self.x)
+                }
+            };
+
+            (from..=to).map(|f| Point { x: f, y: self.y }).collect()
         } else {
             Vec::new()
         }
@@ -45,6 +84,8 @@ impl Point {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
     #[test]
     fn point_create_line_test() {
@@ -69,6 +110,67 @@ mod tests {
 
         assert_eq!(point1.create_line(&point2), vector);
     }
+
+    #[test]
+    fn point_create_line_expanded_test() {
+        let line = Point { x: 0, y: 0 }.create_line_expanded(&Point { x: 3, y: 4 });
+
+        assert!(line.is_empty()); // Checks that the line is empty;
+
+        let must_contain: HashSet<Point> = [
+            Point { x: 0, y: 4 },
+            Point { x: 1, y: 3 },
+            Point { x: 2, y: 2 },
+            Point { x: 3, y: 1 },
+        ]
+        .into();
+
+        let line: HashSet<Point> = Point { x: 0, y: 4 }
+            .create_line_expanded(&Point { x: 3, y: 1 })
+            .into_iter()
+            .collect();
+
+        assert!(must_contain.is_subset(&line));
+
+        let must_contain: HashSet<Point> = [
+            Point { x: 0, y: 0 },
+            Point { x: 1, y: 1 },
+            Point { x: 2, y: 2 },
+            Point { x: 3, y: 3 },
+        ]
+        .into();
+
+        let line: HashSet<Point> = Point { x: 0, y: 0 }
+            .create_line_expanded(&Point { x: 3, y: 3 })
+            .into_iter()
+            .collect();
+
+        println!("{:?}", line);
+
+        assert!(must_contain.is_subset(&line));
+
+        let must_contain: HashSet<Point> = [
+            Point { x: 0, y: 1 },
+            Point { x: 1, y: 2 },
+            Point { x: 2, y: 3 },
+            Point { x: 3, y: 4 },
+        ]
+        .into();
+
+        let line: HashSet<Point> = Point { x: 0, y: 1 }
+            .create_line_expanded(&Point { x: 3, y: 4 })
+            .into_iter()
+            .collect();
+
+        assert!(must_contain.is_subset(&line));
+
+        let line: HashSet<Point> = Point { x: 3, y: 4 }
+            .create_line_expanded(&Point { x: 0, y: 1 })
+            .into_iter()
+            .collect();
+
+        assert!(must_contain.is_subset(&line));
+    }
 }
 
 #[derive(Default)]
@@ -82,8 +184,8 @@ impl Display for Map {
 
         let mut output: String = "".into();
 
-        for x in 0..highest_x + 1 {
-            for y in 0..highest_y + 1 {
+        for x in 0..=highest_x {
+            for y in 0..=highest_y {
                 let temp_point = Point { x: x, y: y };
                 match self.ocupied_spaces.get(&temp_point) {
                     Some(val) => output.push_str(&val.to_string()),
@@ -167,13 +269,14 @@ pub fn run_part_1() -> Option<usize> {
         acc
     });
 
-    let mut debug_file = File::create("debug.txt").unwrap();
-
-    writeln!(&mut debug_file, "{}", map).unwrap();
-
     Some(map.get_amount_over_1())
 }
 
-pub fn run_part_2() -> Option<isize> {
-    None
+pub fn run_part_2() -> Option<usize> {
+    let map: Map = get_input().iter().fold(Map::new(), |mut acc, x| {
+        acc.input_list(x.0.create_line_expanded(&x.1));
+        acc
+    });
+
+    Some(map.get_amount_over_1())
 }
