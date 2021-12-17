@@ -53,5 +53,28 @@ pub fn run_part_1() -> Option<usize> {
 }
 
 pub fn run_part_2() -> Option<usize> {
-    None
+    const SIM_DAYS: usize = 256;
+    const FISH_AGE: usize = 6;
+    const NEW_FISH_AGE: usize = 8;
+
+    let input: Vec<usize> = include_str!("input")
+        .trim()
+        .split(",")
+        .map(|x| x.parse::<usize>().unwrap())
+        .collect();
+
+    let mut fish_schedule: Vec<usize> = vec![0; SIM_DAYS+NEW_FISH_AGE+1];
+    for f in &input {
+        fish_schedule[*f] += 1;
+    }
+
+    let mut fish_count = input.len();
+
+    for day in 0..SIM_DAYS {
+        let todays_fish = fish_schedule[day];
+        fish_schedule[day + FISH_AGE+1] += todays_fish; //These fish will keep producing
+        fish_schedule[day + NEW_FISH_AGE+1] += todays_fish; //The new fish are added
+        fish_count += todays_fish;
+    }
+    Some(fish_count)
 }
